@@ -197,17 +197,22 @@ function AdminLayout({ db, auth, appId, adminUser }) {
         setModalState({ type: 'resolve_options', log: log });
     };
     
-    const renderView = () => {
-        const viewProps = { items, logs, requests, colors, db, appId, department, onResolvePendingClick, adminUser };
-        switch (activeView) {
-            case 'dashboard': return <AdminDashboardView {...viewProps} />;
-            case 'inventory': return <AdminInventoryView {...viewProps} />;
-            case 'requests': return <AdminRequestsView {...viewProps} />;
-            case 'history': return <AdminHistoryView {...viewProps} />;
-            default: return <AdminDashboardView {...viewProps} />;
-        }
-    };
+    const onResolvePendingClick = (log) => {
+  console.log("Clique em Resolver:", log);
+  // Aqui você pode abrir um modal, atualizar status, etc.
+};
 
+const renderView = () => {
+  const viewProps = { items, logs, requests, colors, db, appId, department, onResolvePendingClick, adminUser };
+
+  switch (activeView) {
+    case 'dashboard': return <AdminDashboardView {...viewProps} />;
+    case 'inventory': return <AdminInventoryView {...viewProps} />;
+    case 'requests': return <AdminRequestsView {...viewProps} />;
+    case 'history': return <AdminHistoryView {...viewProps} />;
+    default: return <AdminDashboardView {...viewProps} />;
+  }
+};
     return (
         <div className="bg-gradient-to-br from-gray-900 to-slate-800 min-h-screen flex text-gray-200 font-sans">
             {modalState.type && <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" />}
