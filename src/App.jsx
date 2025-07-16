@@ -15,7 +15,7 @@ import {
     where,
     serverTimestamp
 } from 'firebase/firestore';
-import { LayoutDashboard, Package, ArrowRightLeft, History, PackagePlus, Users, Building, ChevronDown, CheckCircle, XCircle, FileSignature, Clock, HardDrive, Megaphone, PenSquare, Copy, Laptop, ShieldCheck, User, UserCog, LogIn, ShoppingCart, Send, Hourglass, ThumbsUp, ThumbsDown, LogOut, Mail, Lock } from 'lucide-react';
+import { LayoutDashboard, Package, ArrowRightLeft, History, PackagePlus, Users, Building, ChevronDown, CheckCircle, XCircle, FileSignature, Clock, HardDrive, Megaphone, PenSquare, Copy, Laptop, ShieldCheck, User, UserCog, LogIn, ShoppingCart, Send, Hourglass, ThumbsUp, ThumbsDown, LogOut, Mail, Lock, Menu } from 'lucide-react';
 
 // --- Configuração do Firebase ---
 // vvvvv  COLE A CONFIGURAÇÃO DO SEU PROJETO FIREBASE AQUI  vvvvv
@@ -172,6 +172,7 @@ function AdminLayout({ db, auth, appId, adminUser }) {
     const [logs, setLogs] = useState([]);
     const [requests, setRequests] = useState([]);
     const [modalState, setModalState] = useState({ type: null, log: null });
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const departmentColors = useMemo(() => ({
         TI: { name: 'TI', icon: HardDrive, bg: 'bg-blue-600', hoverBg: 'hover:bg-blue-700', ring: 'focus:ring-blue-500', border: 'border-blue-500/50', text: 'text-blue-300', lightBg: 'bg-blue-900/50', shadow: 'shadow-blue-500/50' },
@@ -197,7 +198,7 @@ function AdminLayout({ db, auth, appId, adminUser }) {
     };
     
     const renderView = () => {
-        const viewProps = { items, logs, requests, colors, db, appId, department, onResolvePendingClick: handleResolvePendingClick, adminUser };
+        const viewProps = { items, logs, requests, colors, db, appId, department, onResolvePendingClick, adminUser };
         switch (activeView) {
             case 'dashboard': return <AdminDashboardView {...viewProps} />;
             case 'inventory': return <AdminInventoryView {...viewProps} />;
@@ -214,22 +215,43 @@ function AdminLayout({ db, auth, appId, adminUser }) {
             {modalState.type === 'local' && <SignatureModal log={modalState.log} onClose={() => setModalState({ type: null, log: null })} db={db} appId={appId} department={department} />}
             {modalState.type === 'remote' && <RemoteSignatureModal term={{ logId: modalState.log.id, department: department, receiver: modalState.log.receiver, itemName: modalState.log.itemName }} onClose={() => setModalState({ type: null, log: null })} />}
             {modalState.type === 'manual_confirm' && <ManualConfirmationModal log={modalState.log} onClose={() => setModalState({ type: null, log: null })} db={db} appId={appId} department={department} />}
-            <AdminSidebar activeView={activeView} setActiveView={setActiveView} department={department} setDepartment={setDepartment} colors={colors} departmentOptions={departmentColors} pendingRequests={requests.filter(r => r.status === 'pending').length} auth={auth} adminUser={adminUser} />
-            <main className="flex-1 p-6 md:p-10 overflow-y-auto">{renderView()}</main>
+            
+            <AdminSidebar activeView={activeView} setActiveView={setActiveView} department={department} setDepartment={setDepartment} colors={colors} departmentOptions={departmentColors} pendingRequests={requests.filter(r => r.status === 'pending').length} auth={auth} adminUser={adminUser} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+            
+            <div className="flex-1 flex flex-col">
+                <header className="md:hidden p-4 bg-gray-900/50 backdrop-blur-lg flex items-center justify-between ring-1 ring-white/10">
+                    <button onClick={() => setIsSidebarOpen(true)} className="p-2">
+                        <Menu size={24} />
+                    </button>
+                    <h1 className="text-lg font-bold text-white">Admin</h1>
+                </header>
+                <main className="flex-1 p-6 md:p-10 overflow-y-auto">{renderView()}</main>
+            </div>
         </div>
     );
 }
 
-function AdminSidebar({ activeView, setActiveView, department, setDepartment, colors, departmentOptions, pendingRequests, auth, adminUser }) {
+function AdminSidebar({ activeView, setActiveView, department, setDepartment, colors, departmentOptions, pendingRequests, auth, adminUser, isOpen, setIsOpen }) {
     const navItems = [
         { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard },
         { id: 'inventory', label: 'Inventário', icon: Package },
         { id: 'requests', label: 'Solicitações', icon: ArrowRightLeft, badge: pendingRequests },
         { id: 'history', label: 'Histórico', icon: History },
     ];
-    return (
-        <aside className="w-64 bg-gray-900/70 backdrop-blur-lg flex-col p-4 ring-1 ring-white/10 hidden md:flex">
-            <div className="flex items-center mb-10"><h1 className="text-2xl font-bold text-white tracking-wider">Inventário</h1></div>
+
+    const handleNavClick = (viewId) => {
+        setActiveView(viewId);
+        setIsOpen(false);
+    };
+
+    const sidebarContent = (
+        <>
+            <div className="flex items-center justify-between mb-10">
+                <h1 className="text-2xl font-bold text-white tracking-wider">Inventário</h1>
+                <button onClick={() => setIsOpen(false)} className="md:hidden p-2">
+                    <XCircle size={24} />
+                </button>
+            </div>
             <div className="mb-10">
                 <label className="text-xs text-gray-400 font-semibold uppercase tracking-widest">Setor</label>
                 <div className="mt-2 flex flex-col space-y-2">
@@ -246,7 +268,7 @@ function AdminSidebar({ activeView, setActiveView, department, setDepartment, co
                 <ul className="mt-2 space-y-2">
                     {navItems.map(item => (
                         <li key={item.id}>
-                            <button onClick={() => setActiveView(item.id)} className={`flex items-center w-full p-3 rounded-lg transition-colors duration-200 ${activeView === item.id ? `bg-white/10 ${colors.text}` : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+                            <button onClick={() => handleNavClick(item.id)} className={`flex items-center w-full p-3 rounded-lg transition-colors duration-200 ${activeView === item.id ? `bg-white/10 ${colors.text}` : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
                                 <item.icon className="mr-3" size={20} />
                                 <span className="font-medium flex-1 text-left">{item.label}</span>
                                 {item.badge > 0 && <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">{item.badge}</span>}
@@ -257,12 +279,29 @@ function AdminSidebar({ activeView, setActiveView, department, setDepartment, co
             </nav>
             <div className="mt-auto">
                 <p className="text-sm text-gray-400">Logado como:</p>
-                <p className="font-semibold text-white">{adminUser.email}</p>
+                <p className="font-semibold text-white truncate">{adminUser.email}</p>
                 <button onClick={() => signOut(auth)} className="w-full mt-2 flex items-center justify-center gap-2 p-2 bg-red-600/50 hover:bg-red-500/50 text-red-300 rounded-lg text-sm font-semibold transition-colors">
                     <LogOut size={16} /> Sair
                 </button>
             </div>
-        </aside>
+        </>
+    );
+
+    return (
+        <>
+            {/* Mobile Sidebar */}
+            <div className={`fixed inset-0 z-50 transform md:hidden transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="w-64 bg-gray-900/70 backdrop-blur-lg h-full p-4 ring-1 ring-white/10 flex flex-col">
+                    {sidebarContent}
+                </div>
+            </div>
+            {isOpen && <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsOpen(false)}></div>}
+
+            {/* Desktop Sidebar */}
+            <aside className="w-64 flex-col p-4 hidden md:flex">
+                {sidebarContent}
+            </aside>
+        </>
     );
 }
 
