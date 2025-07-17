@@ -197,22 +197,17 @@ function AdminLayout({ db, auth, appId, adminUser }) {
         setModalState({ type: 'resolve_options', log: log });
     };
     
-    const onResolvePendingClick = (log) => {
-  console.log("Clique em Resolver:", log);
-  // Aqui você pode abrir um modal, atualizar status, etc.
-};
+    const renderView = () => {
+        const viewProps = { items, logs, requests, colors, db, appId, department, onResolvePendingClick: handleResolvePendingClick, adminUser };
+        switch (activeView) {
+            case 'dashboard': return <AdminDashboardView {...viewProps} />;
+            case 'inventory': return <AdminInventoryView {...viewProps} />;
+            case 'requests': return <AdminRequestsView {...viewProps} />;
+            case 'history': return <AdminHistoryView {...viewProps} />;
+            default: return <AdminDashboardView {...viewProps} />;
+        }
+    };
 
-const renderView = () => {
-  const viewProps = { items, logs, requests, colors, db, appId, department, onResolvePendingClick, adminUser };
-
-  switch (activeView) {
-    case 'dashboard': return <AdminDashboardView {...viewProps} />;
-    case 'inventory': return <AdminInventoryView {...viewProps} />;
-    case 'requests': return <AdminRequestsView {...viewProps} />;
-    case 'history': return <AdminHistoryView {...viewProps} />;
-    default: return <AdminDashboardView {...viewProps} />;
-  }
-};
     return (
         <div className="bg-gradient-to-br from-gray-900 to-slate-800 min-h-screen flex text-gray-200 font-sans">
             {modalState.type && <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" />}
@@ -220,9 +215,7 @@ const renderView = () => {
             {modalState.type === 'local' && <SignatureModal log={modalState.log} onClose={() => setModalState({ type: null, log: null })} db={db} appId={appId} department={department} />}
             {modalState.type === 'remote' && <RemoteSignatureModal term={{ logId: modalState.log.id, department: department, receiver: modalState.log.receiver, itemName: modalState.log.itemName }} onClose={() => setModalState({ type: null, log: null })} />}
             {modalState.type === 'manual_confirm' && <ManualConfirmationModal log={modalState.log} onClose={() => setModalState({ type: null, log: null })} db={db} appId={appId} department={department} />}
-            
             <AdminSidebar activeView={activeView} setActiveView={setActiveView} department={department} setDepartment={setDepartment} colors={colors} departmentOptions={departmentColors} pendingRequests={requests.filter(r => r.status === 'pending').length} auth={auth} adminUser={adminUser} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-            
             <div className="flex-1 flex flex-col">
                 <header className="md:hidden p-4 bg-gray-900/50 backdrop-blur-lg flex items-center justify-between ring-1 ring-white/10">
                     <button onClick={() => setIsSidebarOpen(true)} className="p-2">
