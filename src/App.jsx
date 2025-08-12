@@ -17,7 +17,12 @@ import {
     getDocs,
     serverTimestamp
 } from 'firebase/firestore';
-import { LayoutDashboard, Package, ArrowRightLeft, History, PackagePlus, Users, Building, ChevronDown, CheckCircle, XCircle, FileSignature, Clock, HardDrive, Megaphone, PenSquare, Copy, Laptop, ShieldCheck, User, LogIn, ShoppingCart, Send, Hourglass, ThumbsUp, ThumbsDown, LogOut, Mail, Lock, Menu, FileText, Trash2, AlertTriangle } from 'lucide-react';
+import { 
+    LayoutDashboard, Package, ArrowRightLeft, History, PackagePlus, Users, Building, ChevronDown, 
+    CheckCircle, XCircle, FileSignature, Clock, HardDrive, Megaphone, PenSquare, Copy, Laptop, 
+    ShieldCheck, User, LogIn, ShoppingCart, Send, Hourglass, ThumbsUp, ThumbsDown, LogOut, Mail, 
+    Lock, Menu, FileText, Trash2, AlertTriangle, PackageMinus, Edit, PlusCircle, MinusCircle, FileQuestion
+} from 'lucide-react';
 
 // --- Configuração do Firebase ---
 // vvvvv  COLE A CONFIGURAÇÃO DO SEU PROJETO FIREBASE AQUI  vvvvv
@@ -207,13 +212,12 @@ function AdminLayout({ db, auth, appId, adminUser, adminProfile }) {
         return () => { unsubItems(); unsubLogs(); unsubRequests(); };
     }, [department, db, appId]);
 
-    const handleResolvePendingClick = (log) => setModalState({ type: 'resolve_options', data: log });
-    const handleDeleteItemClick = (item) => setModalState({ type: 'confirm_delete', data: item });
+    const handleActionClick = (type, data) => setModalState({ type, data });
     
     const openSidebar = () => setIsSidebarOpen(true);
 
     const renderView = () => {
-        const viewProps = { items, logs, requests, colors, db, appId, department, onResolvePendingClick: handleResolvePendingClick, adminUser, adminProfile, onDeleteItemClick: handleDeleteItemClick };
+        const viewProps = { items, logs, requests, colors, db, appId, department, onResolvePendingClick: (log) => handleActionClick('resolve_options', log), adminUser, adminProfile, onActionClick: handleActionClick };
         switch (activeView) {
             case 'dashboard': return <AdminDashboardView {...viewProps} />;
             case 'inventory': return <AdminInventoryView {...viewProps} />;
@@ -232,6 +236,8 @@ function AdminLayout({ db, auth, appId, adminUser, adminProfile }) {
             {modalState.type === 'remote' && modalState.data && <RemoteSignatureModal term={{ logId: modalState.data.id, department: department, receiver: modalState.data.receiver, itemName: modalState.data.itemName }} onClose={() => setModalState({ type: null, data: null })} />}
             {modalState.type === 'manual_confirm' && <ManualConfirmationModal log={modalState.data} onClose={() => setModalState({ type: null, data: null })} db={db} appId={appId} department={department} />}
             {modalState.type === 'confirm_delete' && <ConfirmDeleteModal item={modalState.data} onClose={() => setModalState({ type: null, data: null })} db={db} appId={appId} department={department} />}
+            {modalState.type === 'edit_quantity' && <EditQuantityModal item={modalState.data} onClose={() => setModalState({ type: null, data: null })} db={db} appId={appId} department={department} adminUser={adminUser} />}
+            {modalState.type === 'withdraw_item' && <WithdrawalModal item={modalState.data} onClose={() => setModalState({ type: null, data: null })} db={db} appId={appId} department={department} adminUser={adminUser} />}
             
             <AdminSidebar activeView={activeView} setActiveView={setActiveView} department={department} setDepartment={setDepartment} colors={colors} departmentOptions={departmentColors} pendingRequests={(requests || []).filter(r => r.status === 'pending').length} auth={auth} adminUser={adminUser} adminProfile={adminProfile} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
             <div className="flex-1 flex flex-col">
@@ -334,7 +340,7 @@ function AdminDashboardView({ items, logs, requests, colors, onResolvePendingCli
     );
 }
 
-function AdminInventoryView({ items, db, appId, department, colors, onDeleteItemClick }) {
+function AdminInventoryView({ items, db, appId, department, colors, onActionClick }) {
     const [newItemName, setNewItemName] = useState('');
     const [newItemStock, setNewItemStock] = useState('');
     
@@ -357,9 +363,15 @@ function AdminInventoryView({ items, db, appId, department, colors, onDeleteItem
                             {(items || []).map(item => (
                                 <div key={item.id} className="flex justify-between items-center p-4 bg-gray-800/50 rounded-lg ring-1 ring-white/5">
                                     <span className="font-medium text-gray-200">{item.name || 'Item sem nome'}</span>
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
                                         <span className={`font-bold text-lg px-3 py-1 rounded-full ${colors.lightBg} ${colors.text} ring-1 ring-inset ring-white/10`}>{item.quantity || 0}</span>
-                                        <button onClick={() => onDeleteItemClick(item)} className="p-2 text-red-400 hover:bg-red-500/20 rounded-full transition-colors">
+                                        <button onClick={() => onActionClick('edit_quantity', item)} className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-full transition-colors" title="Editar Quantidade">
+                                            <Edit size={18} />
+                                        </button>
+                                        <button onClick={() => onActionClick('withdraw_item', item)} className="p-2 text-yellow-400 hover:bg-yellow-500/20 rounded-full transition-colors" title="Retirada Administrativa">
+                                            <PackageMinus size={18} />
+                                        </button>
+                                        <button onClick={() => onActionClick('confirm_delete', item)} className="p-2 text-red-400 hover:bg-red-500/20 rounded-full transition-colors" title="Excluir Item">
                                             <Trash2 size={18} />
                                         </button>
                                     </div>
@@ -408,22 +420,23 @@ function AdminRequestsView({ requests, db, appId, department, adminUser }) {
                     processedAt: serverTimestamp()
                 });
                 
-                const newLog = {
+                const newLogRef = doc(logsCollection);
+                transaction.set(newLogRef, {
                     type: 'distribuição',
                     itemName: request.itemName,
                     quantity: request.quantity,
-                    distributor: adminUser.email,
+                    actor: adminUser.email,
                     receiver: request.userName,
                     timestamp: serverTimestamp(),
                     signatureStatus: 'pending',
                     signature: null,
                     signatureTimestamp: null,
                     requestId: request.id,
-                };
-                transaction.set(doc(logsCollection), newLog);
+                });
             });
         } catch (e) {
             console.error("Transaction failed: ", e);
+            // Here you could set an error state to show in the UI
         }
     };
 
@@ -860,6 +873,185 @@ const ConfirmDeleteModal = ({ item, onClose, db, appId, department }) => {
     );
 };
 
+const EditQuantityModal = ({ item, onClose, db, appId, department, adminUser }) => {
+    const [amount, setAmount] = useState(1);
+    const [justification, setJustification] = useState('');
+    const [operation, setOperation] = useState('add'); // 'add' or 'subtract'
+    const [error, setError] = useState('');
+
+    const handleAdjust = async () => {
+        setError('');
+        if (!justification.trim()) {
+            setError('A justificação é obrigatória.');
+            return;
+        }
+        if (amount <= 0) {
+            setError('A quantidade deve ser maior que zero.');
+            return;
+        }
+
+        const itemRef = doc(db, `/artifacts/${appId}/public/data/${department.toLowerCase()}_items`, item.id);
+        const logsCollection = collection(db, `/artifacts/${appId}/public/data/${department.toLowerCase()}_logs`);
+
+        try {
+            await runTransaction(db, async (transaction) => {
+                const itemDoc = await transaction.get(itemRef);
+                if (!itemDoc.exists()) throw "Item não encontrado!";
+
+                const currentQuantity = itemDoc.data().quantity;
+                let newQuantity;
+                if (operation === 'add') {
+                    newQuantity = currentQuantity + amount;
+                } else {
+                    newQuantity = currentQuantity - amount;
+                    if (newQuantity < 0) {
+                        throw "O stock não pode ser negativo.";
+                    }
+                }
+
+                transaction.update(itemRef, { quantity: newQuantity });
+                
+                const newLogRef = doc(logsCollection);
+                transaction.set(newLogRef, {
+                    type: 'ajuste',
+                    itemName: item.name,
+                    quantity: operation === 'add' ? `+${amount}` : `-${amount}`,
+                    justification: justification,
+                    actor: adminUser.email,
+                    timestamp: serverTimestamp(),
+                    signatureStatus: 'nao_aplicavel',
+                });
+            });
+            onClose();
+        } catch (e) {
+            console.error("Transaction failed: ", e);
+            setError(e.toString());
+        }
+    };
+
+    return (
+        <ModalWrapper onClose={onClose}>
+            <div className="flex items-center mb-4">
+                <Edit className="text-blue-400" size={24} />
+                <h3 className="text-2xl font-bold ml-3 text-gray-100">Ajustar Stock</h3>
+            </div>
+            <p className="text-gray-300 mb-2">
+                Item: <strong className="text-white">{item?.name}</strong>
+            </p>
+            <p className="text-gray-300 mb-6">
+                Stock Atual: <strong className="text-white">{item?.quantity}</strong>
+            </p>
+            
+            <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Operação</label>
+                <div className="flex gap-2">
+                    <button onClick={() => setOperation('add')} className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg transition-colors ${operation === 'add' ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
+                        <PlusCircle size={20} /> Adicionar
+                    </button>
+                    <button onClick={() => setOperation('subtract')} className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg transition-colors ${operation === 'subtract' ? 'bg-red-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
+                        <MinusCircle size={20} /> Subtrair
+                    </button>
+                </div>
+            </div>
+
+            <InputField label="Quantidade" type="number" value={amount} onChange={(e) => setAmount(parseInt(e.target.value) || 1)} placeholder="Quantidade a ajustar" />
+            
+            <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-300 mb-1">Justificação (Obrigatório)</label>
+                <textarea value={justification} onChange={e => setJustification(e.target.value)} placeholder="Ex: Correção de contagem de stock" className="w-full p-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 h-24" />
+            </div>
+
+            {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+
+            <div className="flex space-x-4 pt-4 mt-2">
+                <button onClick={onClose} className="w-full bg-gray-600 hover:bg-gray-500 text-gray-100 font-bold py-3 px-4 rounded-lg">Cancelar</button>
+                <button onClick={handleAdjust} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg">Confirmar Ajuste</button>
+            </div>
+        </ModalWrapper>
+    );
+};
+
+const WithdrawalModal = ({ item, onClose, db, appId, department, adminUser }) => {
+    const [quantity, setQuantity] = useState(1);
+    const [justification, setJustification] = useState('');
+    const [error, setError] = useState('');
+
+    const handleWithdraw = async () => {
+        setError('');
+        if (!justification.trim()) {
+            setError('A justificação é obrigatória.');
+            return;
+        }
+        if (quantity <= 0) {
+            setError('A quantidade deve ser maior que zero.');
+            return;
+        }
+
+        const itemRef = doc(db, `/artifacts/${appId}/public/data/${department.toLowerCase()}_items`, item.id);
+        const logsCollection = collection(db, `/artifacts/${appId}/public/data/${department.toLowerCase()}_logs`);
+
+        try {
+            await runTransaction(db, async (transaction) => {
+                const itemDoc = await transaction.get(itemRef);
+                if (!itemDoc.exists()) throw "Item não encontrado!";
+
+                const currentQuantity = itemDoc.data().quantity;
+                if (currentQuantity < quantity) {
+                    throw "Stock insuficiente para esta retirada.";
+                }
+                const newQuantity = currentQuantity - quantity;
+
+                transaction.update(itemRef, { quantity: newQuantity });
+                
+                const newLogRef = doc(logsCollection);
+                transaction.set(newLogRef, {
+                    type: 'retirada',
+                    itemName: item.name,
+                    quantity: quantity,
+                    justification: justification,
+                    actor: adminUser.email,
+                    timestamp: serverTimestamp(),
+                    signatureStatus: 'nao_aplicavel',
+                });
+            });
+            onClose();
+        } catch (e) {
+            console.error("Transaction failed: ", e);
+            setError(e.toString());
+        }
+    };
+
+    return (
+        <ModalWrapper onClose={onClose}>
+            <div className="flex items-center mb-4">
+                <PackageMinus className="text-yellow-400" size={24} />
+                <h3 className="text-2xl font-bold ml-3 text-gray-100">Retirada Administrativa</h3>
+            </div>
+             <p className="text-gray-300 mb-2">
+                Item: <strong className="text-white">{item?.name}</strong>
+            </p>
+            <p className="text-gray-300 mb-6">
+                Stock Atual: <strong className="text-white">{item?.quantity}</strong>
+            </p>
+
+            <InputField label="Quantidade a Retirar" type="number" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} placeholder="Quantidade" />
+            
+            <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-300 mb-1">Justificação (Obrigatório)</label>
+                <textarea value={justification} onChange={e => setJustification(e.target.value)} placeholder="Ex: Item para uso em evento interno" className="w-full p-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-yellow-500 h-24" />
+            </div>
+
+            {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+
+            <div className="flex space-x-4 pt-4 mt-2">
+                <button onClick={onClose} className="w-full bg-gray-600 hover:bg-gray-500 text-gray-100 font-bold py-3 px-4 rounded-lg">Cancelar</button>
+                <button onClick={handleWithdraw} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg">Confirmar Retirada</button>
+            </div>
+        </ModalWrapper>
+    );
+};
+
+
 const ResolveOptionsModal = ({ onClose, onLocalSign, onRemoteSign, onManualConfirm }) => (<ModalWrapper onClose={onClose}><h3 className="text-2xl font-bold text-gray-100 mb-2">Resolver Pendência</h3><p className="text-gray-300 mb-6">Como deseja registar a confirmação?</p><div className="flex flex-col md:flex-row gap-4"><button onClick={onLocalSign} className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-all duration-200 text-center ring-1 ring-white/10 transform hover:scale-105"><Laptop size={32} className="mb-2 text-blue-400" /><span className="font-bold text-lg text-white">Assinatura Local</span><span className="text-sm text-gray-400">A pessoa assina neste computador.</span></button><button onClick={onRemoteSign} className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-all duration-200 text-center ring-1 ring-white/10 transform hover:scale-105"><Copy size={32} className="mb-2 text-orange-400" /><span className="font-bold text-lg text-white">Assinatura Remota</span><span className="text-sm text-gray-400">Copiar texto para enviar.</span></button><button onClick={onManualConfirm} className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-all duration-200 text-center ring-1 ring-white/10 transform hover:scale-105"><ShieldCheck size={32} className="mb-2 text-green-400" /><span className="font-bold text-lg text-white">Confirmar Manualmente</span><span className="text-sm text-gray-400">Recebi a confirmação por fora.</span></button></div><button onClick={onClose} className="mt-8 w-full text-center text-gray-400 hover:underline">Cancelar</button></ModalWrapper>);
 const SignatureModal = ({ log, onClose, db, appId, department }) => {
     const [signerName, setSignerName] = useState('');
@@ -917,32 +1109,54 @@ const InfoCard = ({ title, value, icon: Icon, colors = {} }) => (
 const LogItem = ({ log, onResolvePendingClick }) => {
     if (!log || typeof log !== 'object') return null;
 
+    const logTypes = {
+        'distribuição': { color: 'border-red-500/50', textColor: 'text-red-400', text: 'Distribuição' },
+        'retirada': { color: 'border-yellow-500/50', textColor: 'text-yellow-400', text: 'Retirada Admin' },
+        'ajuste': { color: 'border-blue-500/50', textColor: 'text-blue-400', text: 'Ajuste de Stock' },
+        'default': { color: 'border-gray-500/50', textColor: 'text-gray-400', text: 'Evento' }
+    };
+
+    const currentType = logTypes[log.type] || logTypes.default;
     const isDistribution = log.type === 'distribuição';
     const isSigned = log.signatureStatus === 'signed';
     const isManual = log.signatureStatus === 'confirmed_manually';
-    const typeDisplay = (log.type || 'evento').charAt(0).toUpperCase() + (log.type || 'evento').slice(1);
+    const isNotApplicable = log.signatureStatus === 'nao_aplicavel';
+    
+    const quantityText = log.type === 'ajuste' ? log.quantity : `${log.quantity || 0}x`;
 
     return (
-        <div className={`p-4 rounded-lg border-l-4 ${isDistribution ? 'border-red-500/50' : 'border-green-500/50'} bg-gray-800/50 ring-1 ring-white/5`}>
-            <div className="flex justify-between items-start"><p className="font-bold text-gray-100">{(log.quantity || 0)}x {log.itemName || 'Item desconhecido'}</p><span className="text-xs text-gray-400">{formatFirebaseTimestamp(log.timestamp)}</span></div>
-            <p className={`text-sm font-semibold ${isDistribution ? 'text-red-400' : 'text-green-400'}`}>{typeDisplay}</p>
-            <div className="text-sm text-gray-300 mt-2 space-y-1"><div className="flex items-center"><User size={14} className="mr-2 text-gray-400" /><span>Por: {log.distributor || 'Desconhecido'}</span></div>{isDistribution && <div className="flex items-center"><Building size={14} className="mr-2 text-gray-400" /><span>Para: {log.receiver || 'Desconhecido'}</span></div>}</div>
-            <div className={`mt-3 pt-3 border-t border-white/10 flex items-center text-sm ${isSigned || isManual ? 'text-green-400' : 'text-amber-400'}`}>
-                {isSigned ? (<><CheckCircle size={16} className="mr-2" /><span>Assinado por {log.signature || 'N/A'}</span></>) : 
-                 isManual ? (<><ShieldCheck size={16} className="mr-2" /><span>{log.signature || 'Confirmado Manualmente'}</span></>) :
-                 (<>
-                    <Clock size={16} className="mr-2" />
-                    <span className="flex-1">Assinatura Pendente</span>
-                    <button onClick={() => onResolvePendingClick(log)} className="bg-amber-500/20 text-amber-300 hover:bg-amber-500/40 px-3 py-1 text-xs font-semibold rounded-md flex items-center ring-1 ring-amber-500/30 transition-colors duration-200">
-                        <PenSquare size={14} className="mr-1.5" />
-                        Resolver
-                    </button>
-                 </>)
-                }
+        <div className={`p-4 rounded-lg border-l-4 ${currentType.color} bg-gray-800/50 ring-1 ring-white/5`}>
+            <div className="flex justify-between items-start">
+                <p className="font-bold text-gray-100">{quantityText} {log.itemName || 'Item desconhecido'}</p>
+                <span className="text-xs text-gray-400">{formatFirebaseTimestamp(log.timestamp)}</span>
             </div>
+            <p className={`text-sm font-semibold ${currentType.textColor}`}>{currentType.text}</p>
+            
+            <div className="text-sm text-gray-300 mt-2 space-y-1">
+                <div className="flex items-center"><User size={14} className="mr-2 text-gray-400" /><span>Por: {log.actor || 'Desconhecido'}</span></div>
+                {isDistribution && <div className="flex items-center"><Building size={14} className="mr-2 text-gray-400" /><span>Para: {log.receiver || 'Desconhecido'}</span></div>}
+                {log.justification && <div className="flex items-start pt-1"><FileQuestion size={14} className="mr-2 mt-0.5 text-gray-400 flex-shrink-0" /><span>Justificação: {log.justification}</span></div>}
+            </div>
+
+            {isDistribution && (
+                <div className={`mt-3 pt-3 border-t border-white/10 flex items-center text-sm ${isSigned || isManual ? 'text-green-400' : 'text-amber-400'}`}>
+                    {isSigned ? (<><CheckCircle size={16} className="mr-2" /><span>Assinado por {log.signature || 'N/A'}</span></>) : 
+                     isManual ? (<><ShieldCheck size={16} className="mr-2" /><span>{log.signature || 'Confirmado Manualmente'}</span></>) :
+                     (<>
+                        <Clock size={16} className="mr-2" />
+                        <span className="flex-1">Assinatura Pendente</span>
+                        <button onClick={() => onResolvePendingClick(log)} className="bg-amber-500/20 text-amber-300 hover:bg-amber-500/40 px-3 py-1 text-xs font-semibold rounded-md flex items-center ring-1 ring-amber-500/30 transition-colors duration-200">
+                            <PenSquare size={14} className="mr-1.5" />
+                            Resolver
+                        </button>
+                     </>)
+                    }
+                </div>
+            )}
         </div>
     );
 };
+
 
 const FormCard = ({ title, icon, children, colors = {} }) => <div className={`bg-gray-800/50 backdrop-blur-lg p-6 rounded-xl ring-1 ring-white/10 border-t-4 ${colors.border || 'border-gray-600/50'}`}><div className="flex items-center mb-4">{icon}<h2 className="text-xl font-bold ml-3 text-gray-100">{title}</h2></div>{children}</div>;
 const DataCard = ({ title, icon, children, colors = {} }) => <div className={`bg-gray-800/50 backdrop-blur-lg p-6 rounded-xl ring-1 ring-white/10 border-t-4 ${colors.border || 'border-gray-600/50'}`}><div className="flex items-center mb-4">{icon}<h2 className="text-xl font-bold ml-3 text-gray-100">{title}</h2></div>{children}</div>;
