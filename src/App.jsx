@@ -21,7 +21,7 @@ import {
     LayoutDashboard, Package, ArrowRightLeft, History, PackagePlus, Users, Building, ChevronDown, 
     CheckCircle, XCircle, FileSignature, Clock, HardDrive, Megaphone, PenSquare, Copy, Laptop, 
     ShieldCheck, User, LogIn, ShoppingCart, Send, Hourglass, ThumbsUp, ThumbsDown, LogOut, Mail, 
-    Lock, Menu, FileText, Trash2, AlertTriangle, PackageMinus, Edit, PlusCircle, MinusCircle, FileQuestion
+    Lock, Menu, FileText, Trash2, AlertTriangle, PackageMinus, Edit, PlusCircle, MinusCircle, FileQuestion, Bell
 } from 'lucide-react';
 
 // --- Configuração do Firebase ---
@@ -61,7 +61,7 @@ export default function App() {
                         const userDocSnap = await getDoc(userDocRef);
                         const userProfile = userDocSnap.exists() 
                             ? userDocSnap.data() 
-                            : { role: 'user', name: 'Utilizador sem nome', email: authUser.email };
+                            : { role: 'user', name: 'Usuário sem nome', email: authUser.email };
                         
                         setAuthStatus({ loading: false, user: authUser, profile: userProfile });
                     } else {
@@ -99,7 +99,7 @@ export default function App() {
 const LoadingScreen = () => (
     <div className="bg-gray-900 min-h-screen flex justify-center items-center">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-        <p className="ml-4 text-gray-300">A carregar o sistema...</p>
+        <p className="ml-4 text-gray-300">Carregando o sistema...</p>
     </div>
 );
 
@@ -138,16 +138,16 @@ const LoginScreen = ({ auth, db }) => {
                 case 'auth/invalid-credential':
                 case 'auth/wrong-password':
                 case 'auth/user-not-found':
-                    setError('Credenciais inválidas. Verifique o seu e-mail e palavra-passe.');
+                    setError('Credenciais inválidas. Verifique seu e-mail e senha.');
                     break;
                 case 'auth/email-already-in-use':
-                    setError('Este e-mail já está a ser utilizado por outra conta.');
+                    setError('Este e-mail já está sendo utilizado por outra conta.');
                     break;
                 case 'auth/weak-password':
-                    setError('A palavra-passe é muito fraca. Utilize pelo menos 6 caracteres.');
+                    setError('A senha é muito fraca. Utilize pelo menos 6 caracteres.');
                     break;
                 case 'auth/operation-not-allowed':
-                    setError('Operação não permitida. Verifique se o método de login "E-mail/palavra-passe" está ativado no seu projeto Firebase.');
+                    setError('Operação não permitida. Verifique se o método de login "E-mail/senha" está ativado no seu projeto Firebase.');
                     break;
                 default:
                     setError('Ocorreu um erro inesperado. Por favor, tente novamente.');
@@ -161,16 +161,16 @@ const LoginScreen = ({ auth, db }) => {
         <div className="bg-gradient-to-br from-gray-900 to-slate-800 min-h-screen flex justify-center items-center p-4">
             <div className="w-full max-w-md bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-2xl p-8 ring-1 ring-white/10 text-center animate-fade-in-up">
                 <h1 className="text-3xl font-bold text-white mb-2">{isLoginView ? 'Login' : 'Criar Conta'}</h1>
-                <p className="text-gray-400 mb-8">{isLoginView ? 'Aceda ao sistema com as suas credenciais.' : 'Crie uma nova conta para começar.'}</p>
+                <p className="text-gray-400 mb-8">{isLoginView ? 'Acesse o sistema com suas credenciais.' : 'Crie uma nova conta para começar.'}</p>
                 <form onSubmit={handleAuthAction} className="space-y-4">
                     {!isLoginView && (
-                        <InputField label="Nome Completo" value={name} onChange={e => setName(e.target.value)} placeholder="O seu nome completo" icon={User} />
+                        <InputField label="Nome Completo" value={name} onChange={e => setName(e.target.value)} placeholder="Seu nome completo" icon={User} />
                     )}
                     <InputField type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" icon={Mail} />
-                    <InputField type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="A sua palavra-passe" icon={Lock} />
+                    <InputField type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Sua senha" icon={Lock} />
                     {error && <p className="text-red-400 text-sm">{error}</p>}
                     <button type="submit" className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-green-600/30 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
-                        <LogIn size={20}/> {isLoginView ? 'Entrar' : 'Registar'}
+                        <LogIn size={20}/> {isLoginView ? 'Entrar' : 'Registrar'}
                     </button>
                 </form>
                 <button onClick={() => setIsLoginView(!isLoginView)} className="mt-6 text-sm text-blue-400 hover:underline">
@@ -238,6 +238,7 @@ function AdminLayout({ db, auth, appId, adminUser, adminProfile }) {
             {modalState.type === 'confirm_delete' && <ConfirmDeleteModal item={modalState.data} onClose={() => setModalState({ type: null, data: null })} db={db} appId={appId} department={department} />}
             {modalState.type === 'edit_quantity' && <EditQuantityModal item={modalState.data} onClose={() => setModalState({ type: null, data: null })} db={db} appId={appId} department={department} adminUser={adminUser} />}
             {modalState.type === 'withdraw_item' && <WithdrawalModal item={modalState.data} onClose={() => setModalState({ type: null, data: null })} db={db} appId={appId} department={department} adminUser={adminUser} />}
+            {modalState.type === 'set_min_quantity' && <SetMinQuantityModal item={modalState.data} onClose={() => setModalState({ type: null, data: null })} db={db} appId={appId} department={department} />}
             
             <AdminSidebar activeView={activeView} setActiveView={setActiveView} department={department} setDepartment={setDepartment} colors={colors} departmentOptions={departmentColors} pendingRequests={(requests || []).filter(r => r.status === 'pending').length} auth={auth} adminUser={adminUser} adminProfile={adminProfile} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
             <div className="flex-1 flex flex-col">
@@ -301,7 +302,7 @@ function AdminSidebar({ activeView, setActiveView, department, setDepartment, co
                 </ul>
             </nav>
             <div className="mt-auto">
-                <p className="text-sm text-gray-400">Sessão iniciada como:</p>
+                <p className="text-sm text-gray-400">Conectado como:</p>
                 <p className="font-semibold text-white truncate">{adminProfile?.name || adminUser?.email}</p>
                 <button onClick={() => signOut(auth)} className="w-full mt-2 flex items-center justify-center gap-2 p-2 bg-red-600/50 hover:bg-red-500/50 text-red-300 rounded-lg text-sm font-semibold transition-colors">
                     <LogOut size={16} /> Sair
@@ -322,12 +323,53 @@ function AdminSidebar({ activeView, setActiveView, department, setDepartment, co
 function AdminDashboardView({ items, logs, requests, colors, onResolvePendingClick }) {
     const totalStock = (items || []).reduce((acc, item) => acc + (item.quantity || 0), 0);
     const pendingRequests = (requests || []).filter(r => r.status === 'pending');
+    const lowStockItems = (items || []).filter(item => typeof item.minQuantity !== 'undefined' && item.quantity <= item.minQuantity);
+
+    const handleNotifyResponsible = (item) => {
+        const recipient = "administrativo@uniforteseguros.com.br";
+        const subject = `Alerta de Estoque Baixo: ${item.name}`;
+        const body = `Olá,\n\nO item "${item.name}" atingiu o nível de estoque mínimo.\n\n- Quantidade Atual: ${item.quantity}\n- Quantidade Mínima: ${item.minQuantity}\n\nPor favor, providenciar a reposição.\n\nEnviado pelo Sistema de Inventário.`;
+        
+        const mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoLink;
+    };
+
     return (
         <div>
             <ViewHeader title="Visão Geral do Admin" subtitle={`Resumo do inventário de ${colors.name} e atividades.`} />
+            
+            {lowStockItems.length > 0 && (
+                <DataCard 
+                    title="Alertas de Estoque Baixo" 
+                    icon={<Bell className="text-yellow-400" size={24}/>} 
+                    colors={{border: 'border-yellow-500/50'}}
+                    containerClassName="mb-8"
+                >
+                    <div className="space-y-3">
+                        {lowStockItems.map(item => (
+                            <div key={item.id} className="bg-yellow-500/10 p-3 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center ring-1 ring-yellow-500/20 gap-2">
+                                <div className="flex-1">
+                                    <p className="font-bold text-yellow-300">{item.name}</p>
+                                    <p className="text-sm text-yellow-400">
+                                        Apenas <strong className="text-white">{item.quantity}</strong> unidades restantes. (Mínimo: {item.minQuantity})
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={() => handleNotifyResponsible(item)}
+                                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-2 px-3 rounded-md transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Send size={14} />
+                                    Notificar Responsável
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </DataCard>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 <InfoCard title="Tipos de Itens" value={(items || []).length} icon={Package} colors={colors} />
-                <InfoCard title="Itens em Stock" value={totalStock} icon={PackagePlus} colors={colors} />
+                <InfoCard title="Itens em Estoque" value={totalStock} icon={PackagePlus} colors={colors} />
                 <InfoCard title="Solicitações Pendentes" value={pendingRequests.length} icon={Hourglass} colors={colors} />
             </div>
             <DataCard title="Atividade Recente" icon={<History className={colors.text} size={24}/>} colors={colors}>
@@ -349,7 +391,11 @@ function AdminInventoryView({ items, db, appId, department, colors, onActionClic
         if (!newItemName.trim() || !newItemStock || parseInt(newItemStock) <= 0) return;
         try {
             const itemsPath = `/artifacts/${appId}/public/data/${department.toLowerCase()}_items`;
-            await addDoc(collection(db, itemsPath), { name: newItemName.trim(), quantity: parseInt(newItemStock) });
+            await addDoc(collection(db, itemsPath), { 
+                name: newItemName.trim(), 
+                quantity: parseInt(newItemStock),
+                minQuantity: 0 // Default min quantity
+            });
             setNewItemName(''); setNewItemStock('');
         } catch (error) { console.error("Erro ao adicionar item.", error); }
     };
@@ -362,9 +408,15 @@ function AdminInventoryView({ items, db, appId, department, colors, onActionClic
                         <div className="space-y-3">
                             {(items || []).map(item => (
                                 <div key={item.id} className="flex justify-between items-center p-4 bg-gray-800/50 rounded-lg ring-1 ring-white/5">
-                                    <span className="font-medium text-gray-200">{item.name || 'Item sem nome'}</span>
+                                    <div>
+                                        <span className="font-medium text-gray-200">{item.name || 'Item sem nome'}</span>
+                                        <p className="text-xs text-gray-400">Estoque Mínimo: {item.minQuantity || 'Não definido'}</p>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                         <span className={`font-bold text-lg px-3 py-1 rounded-full ${colors.lightBg} ${colors.text} ring-1 ring-inset ring-white/10`}>{item.quantity || 0}</span>
+                                        <button onClick={() => onActionClick('set_min_quantity', item)} className="p-2 text-gray-400 hover:bg-gray-500/20 rounded-full transition-colors" title="Definir Estoque Mínimo">
+                                            <Bell size={18} />
+                                        </button>
                                         <button onClick={() => onActionClick('edit_quantity', item)} className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-full transition-colors" title="Editar Quantidade">
                                             <Edit size={18} />
                                         </button>
@@ -383,8 +435,8 @@ function AdminInventoryView({ items, db, appId, department, colors, onActionClic
                 <div>
                     <FormCard title="Adicionar Novo Item" icon={<PackagePlus className={colors.text} size={24}/>} colors={colors}>
                         <form onSubmit={handleAddItem} className="space-y-4">
-                            <InputField label="Nome do Item" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Ex: Rato sem fios" colors={colors} />
-                            <InputField label="Stock Inicial" type="number" value={newItemStock} onChange={(e) => setNewItemStock(e.target.value)} placeholder="Ex: 50" colors={colors} />
+                            <InputField label="Nome do Item" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Ex: Mouse sem fio" colors={colors} />
+                            <InputField label="Estoque Inicial" type="number" value={newItemStock} onChange={(e) => setNewItemStock(e.target.value)} placeholder="Ex: 50" colors={colors} />
                             <button type="submit" className={`w-full text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ${colors.bg} ${colors.hoverBg} ${colors.ring} shadow-lg ${colors.shadow} hover:scale-105 transform`}>Adicionar</button>
                         </form>
                     </FormCard>
@@ -410,7 +462,7 @@ function AdminRequestsView({ requests, db, appId, department, adminUser }) {
                 if (!itemDoc.exists()) throw "Item não encontrado!";
                 
                 const currentQuantity = itemDoc.data().quantity;
-                if (currentQuantity < request.quantity) throw "Stock insuficiente!";
+                if (currentQuantity < request.quantity) throw "Estoque insuficiente!";
 
                 const newQuantity = currentQuantity - request.quantity;
                 transaction.update(itemRef, { quantity: newQuantity });
@@ -458,7 +510,7 @@ function AdminRequestsView({ requests, db, appId, department, adminUser }) {
         return (
             <div className="bg-gray-800/50 p-4 rounded-lg ring-1 ring-white/10">
                 <p className="font-bold text-white">{(request.quantity || 0)}x {request.itemName || 'Item desconhecido'}</p>
-                <p className="text-sm text-gray-400">Solicitado por: {request.userName || 'Utilizador desconhecido'}</p>
+                <p className="text-sm text-gray-400">Solicitado por: {request.userName || 'Usuário desconhecido'}</p>
                 <p className="text-xs text-gray-500">Em: {formatFirebaseTimestamp(request.timestamp)}</p>
                 {request.status === 'pending' && (
                     <div className="flex gap-2 mt-3">
@@ -494,8 +546,8 @@ function AdminRequestsView({ requests, db, appId, department, adminUser }) {
 function AdminHistoryView({ logs, onResolvePendingClick }) {
     return (
         <div>
-            <ViewHeader title="Histórico Completo" subtitle="Todas as movimentações registadas no sistema." />
-            <DataCard title="Registos" icon={<History className="text-gray-400" size={24}/>} colors={{border: 'border-gray-600/50'}}>
+            <ViewHeader title="Histórico Completo" subtitle="Todas as movimentações registradas no sistema." />
+            <DataCard title="Registros" icon={<History className="text-gray-400" size={24}/>} colors={{border: 'border-gray-600/50'}}>
                  <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                     {(logs || []).map(log => <LogItem key={log.id} log={log} onResolvePendingClick={onResolvePendingClick} />)}
                  </div>
@@ -578,21 +630,21 @@ function AdminReportsView({ db, appId, departments }) {
 
     return (
         <div>
-            <ViewHeader title="Relatório por Utilizador" subtitle="Visualize todas as solicitações finalizadas de um utilizador específico." />
+            <ViewHeader title="Relatório por Usuário" subtitle="Visualize todas as solicitações finalizadas de um usuário específico." />
             <FormCard title="Gerar Relatório" icon={<Users className="text-gray-400" size={24}/>} colors={{border: 'border-gray-600/50'}}>
                 <SelectField
-                    label="Selecione um Utilizador"
+                    label="Selecione um Usuário"
                     value={selectedUserId}
                     onChange={(e) => setSelectedUserId(e.target.value)}
                     options={allUsers.map(u => ({ id: u.id, name: u.name || u.email }))}
-                    placeholder="Selecione um utilizador..."
+                    placeholder="Selecione um usuário..."
                 />
             </FormCard>
 
             {isLoading && (
                 <div className="flex justify-center items-center mt-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                    <p className="ml-3 text-gray-300">A procurar registos...</p>
+                    <p className="ml-3 text-gray-300">Procurando registros...</p>
                 </div>
             )}
 
@@ -625,7 +677,7 @@ function AdminReportsView({ db, appId, departments }) {
                                 </table>
                             </div>
                         ) : (
-                            <p className="text-gray-400 text-center py-6">Nenhuma solicitação finalizada foi encontrada para este utilizador.</p>
+                            <p className="text-gray-400 text-center py-6">Nenhuma solicitação finalizada foi encontrada para este usuário.</p>
                         )}
                     </DataCard>
                 </div>
@@ -695,12 +747,12 @@ function UserLayout({ db, auth, appId, currentUser, userProfile }) {
         <div className="bg-gradient-to-br from-gray-900 to-slate-800 min-h-screen text-gray-200 font-sans">
             <header className="p-4 flex justify-between items-center bg-gray-900/50 backdrop-blur-lg ring-1 ring-white/10">
                 <div>
-                    <h1 className="text-xl font-bold text-white">Portal do Utilizador</h1>
+                    <h1 className="text-xl font-bold text-white">Portal do Usuário</h1>
                     <p className="text-sm text-gray-400">Bem-vindo, {userProfile?.name || currentUser?.email}</p>
                 </div>
                 <div className="flex items-center gap-4">
                     <button onClick={() => setActiveView('catalog')} className={`font-semibold transition-colors ${activeView === 'catalog' ? colors.text : 'text-gray-400 hover:text-white'}`}>Catálogo</button>
-                    <button onClick={() => setActiveView('requests')} className={`font-semibold transition-colors ${activeView === 'requests' ? colors.text : 'text-gray-400 hover:text-white'}`}>As Minhas Solicitações</button>
+                    <button onClick={() => setActiveView('requests')} className={`font-semibold transition-colors ${activeView === 'requests' ? colors.text : 'text-gray-400 hover:text-white'}`}>Minhas Solicitações</button>
                     <button onClick={() => signOut(auth)} className="text-red-400 hover:text-red-300"><LogOut size={20} /></button>
                 </div>
             </header>
@@ -805,7 +857,7 @@ function UserMyRequestsView({ db, appId, currentUser }) {
 
     return (
         <div>
-            <ViewHeader title="As Minhas Solicitações" subtitle="Acompanhe o estado dos seus pedidos." />
+            <ViewHeader title="Minhas Solicitações" subtitle="Acompanhe o estado dos seus pedidos." />
             <div className="space-y-4">
                 {sortedRequests.map(req => (
                     <div key={req.id} className="bg-gray-800/50 p-4 rounded-lg ring-1 ring-white/10 flex justify-between items-center">
@@ -863,7 +915,7 @@ const ConfirmDeleteModal = ({ item, onClose, db, appId, department }) => {
                 <h3 className="text-2xl font-bold ml-3 text-gray-100">Confirmar Exclusão</h3>
             </div>
             <p className="text-gray-300 mb-6">
-                Tem a certeza que deseja excluir o item <strong className="text-white">{item?.name || 'selecionado'}</strong>? Esta ação não pode ser desfeita.
+                Tem certeza que deseja excluir o item <strong className="text-white">{item?.name || 'selecionado'}</strong>? Esta ação não pode ser desfeita.
             </p>
             <div className="flex space-x-4 pt-2">
                 <button onClick={onClose} className="w-full bg-gray-600 hover:bg-gray-500 text-gray-100 font-bold py-3 px-4 rounded-lg">Cancelar</button>
@@ -905,7 +957,7 @@ const EditQuantityModal = ({ item, onClose, db, appId, department, adminUser }) 
                 } else {
                     newQuantity = currentQuantity - amount;
                     if (newQuantity < 0) {
-                        throw "O stock não pode ser negativo.";
+                        throw "O estoque não pode ser negativo.";
                     }
                 }
 
@@ -933,13 +985,13 @@ const EditQuantityModal = ({ item, onClose, db, appId, department, adminUser }) 
         <ModalWrapper onClose={onClose}>
             <div className="flex items-center mb-4">
                 <Edit className="text-blue-400" size={24} />
-                <h3 className="text-2xl font-bold ml-3 text-gray-100">Ajustar Stock</h3>
+                <h3 className="text-2xl font-bold ml-3 text-gray-100">Ajustar Estoque</h3>
             </div>
             <p className="text-gray-300 mb-2">
                 Item: <strong className="text-white">{item?.name}</strong>
             </p>
             <p className="text-gray-300 mb-6">
-                Stock Atual: <strong className="text-white">{item?.quantity}</strong>
+                Estoque Atual: <strong className="text-white">{item?.quantity}</strong>
             </p>
             
             <div className="mb-4">
@@ -958,7 +1010,7 @@ const EditQuantityModal = ({ item, onClose, db, appId, department, adminUser }) 
             
             <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-300 mb-1">Justificação (Obrigatório)</label>
-                <textarea value={justification} onChange={e => setJustification(e.target.value)} placeholder="Ex: Correção de contagem de stock" className="w-full p-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 h-24" />
+                <textarea value={justification} onChange={e => setJustification(e.target.value)} placeholder="Ex: Correção de contagem de estoque" className="w-full p-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 h-24" />
             </div>
 
             {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
@@ -997,7 +1049,7 @@ const WithdrawalModal = ({ item, onClose, db, appId, department, adminUser }) =>
 
                 const currentQuantity = itemDoc.data().quantity;
                 if (currentQuantity < quantity) {
-                    throw "Stock insuficiente para esta retirada.";
+                    throw "Estoque insuficiente para esta retirada.";
                 }
                 const newQuantity = currentQuantity - quantity;
 
@@ -1031,7 +1083,7 @@ const WithdrawalModal = ({ item, onClose, db, appId, department, adminUser }) =>
                 Item: <strong className="text-white">{item?.name}</strong>
             </p>
             <p className="text-gray-300 mb-6">
-                Stock Atual: <strong className="text-white">{item?.quantity}</strong>
+                Estoque Atual: <strong className="text-white">{item?.quantity}</strong>
             </p>
 
             <InputField label="Quantidade a Retirar" type="number" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value) || 1)} placeholder="Quantidade" />
@@ -1051,8 +1103,58 @@ const WithdrawalModal = ({ item, onClose, db, appId, department, adminUser }) =>
     );
 };
 
+const SetMinQuantityModal = ({ item, onClose, db, appId, department }) => {
+    const [minQuantity, setMinQuantity] = useState(item?.minQuantity || 0);
+    const [error, setError] = useState('');
 
-const ResolveOptionsModal = ({ onClose, onLocalSign, onRemoteSign, onManualConfirm }) => (<ModalWrapper onClose={onClose}><h3 className="text-2xl font-bold text-gray-100 mb-2">Resolver Pendência</h3><p className="text-gray-300 mb-6">Como deseja registar a confirmação?</p><div className="flex flex-col md:flex-row gap-4"><button onClick={onLocalSign} className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-all duration-200 text-center ring-1 ring-white/10 transform hover:scale-105"><Laptop size={32} className="mb-2 text-blue-400" /><span className="font-bold text-lg text-white">Assinatura Local</span><span className="text-sm text-gray-400">A pessoa assina neste computador.</span></button><button onClick={onRemoteSign} className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-all duration-200 text-center ring-1 ring-white/10 transform hover:scale-105"><Copy size={32} className="mb-2 text-orange-400" /><span className="font-bold text-lg text-white">Assinatura Remota</span><span className="text-sm text-gray-400">Copiar texto para enviar.</span></button><button onClick={onManualConfirm} className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-all duration-200 text-center ring-1 ring-white/10 transform hover:scale-105"><ShieldCheck size={32} className="mb-2 text-green-400" /><span className="font-bold text-lg text-white">Confirmar Manualmente</span><span className="text-sm text-gray-400">Recebi a confirmação por fora.</span></button></div><button onClick={onClose} className="mt-8 w-full text-center text-gray-400 hover:underline">Cancelar</button></ModalWrapper>);
+    const handleSet = async () => {
+        setError('');
+        const quantityValue = parseInt(minQuantity);
+        if (isNaN(quantityValue) || quantityValue < 0) {
+            setError('Por favor, insira um número válido e não negativo.');
+            return;
+        }
+
+        try {
+            const itemRef = doc(db, `/artifacts/${appId}/public/data/${department.toLowerCase()}_items`, item.id);
+            await updateDoc(itemRef, { minQuantity: quantityValue });
+            onClose();
+        } catch (e) {
+            console.error("Error setting min quantity:", e);
+            setError('Ocorreu um erro ao salvar. Tente novamente.');
+        }
+    };
+
+    return (
+        <ModalWrapper onClose={onClose}>
+            <div className="flex items-center mb-4">
+                <Bell className="text-gray-400" size={24} />
+                <h3 className="text-2xl font-bold ml-3 text-gray-100">Definir Estoque Mínimo</h3>
+            </div>
+            <p className="text-gray-300 mb-6">
+                Defina a quantidade mínima para o item <strong className="text-white">{item?.name}</strong>. Quando o estoque atingir este valor, um alerta será exibido no painel.
+            </p>
+
+            <InputField 
+                label="Quantidade Mínima de Alerta" 
+                type="number" 
+                value={minQuantity} 
+                onChange={(e) => setMinQuantity(e.target.value)} 
+                placeholder="Ex: 10" 
+            />
+
+            {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+
+            <div className="flex space-x-4 pt-4 mt-2">
+                <button onClick={onClose} className="w-full bg-gray-600 hover:bg-gray-500 text-gray-100 font-bold py-3 px-4 rounded-lg">Cancelar</button>
+                <button onClick={handleSet} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg">Salvar</button>
+            </div>
+        </ModalWrapper>
+    );
+};
+
+
+const ResolveOptionsModal = ({ onClose, onLocalSign, onRemoteSign, onManualConfirm }) => (<ModalWrapper onClose={onClose}><h3 className="text-2xl font-bold text-gray-100 mb-2">Resolver Pendência</h3><p className="text-gray-300 mb-6">Como deseja registrar a confirmação?</p><div className="flex flex-col md:flex-row gap-4"><button onClick={onLocalSign} className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-all duration-200 text-center ring-1 ring-white/10 transform hover:scale-105"><Laptop size={32} className="mb-2 text-blue-400" /><span className="font-bold text-lg text-white">Assinatura Local</span><span className="text-sm text-gray-400">A pessoa assina neste computador.</span></button><button onClick={onRemoteSign} className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-all duration-200 text-center ring-1 ring-white/10 transform hover:scale-105"><Copy size={32} className="mb-2 text-orange-400" /><span className="font-bold text-lg text-white">Assinatura Remota</span><span className="text-sm text-gray-400">Copiar texto para enviar.</span></button><button onClick={onManualConfirm} className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-all duration-200 text-center ring-1 ring-white/10 transform hover:scale-105"><ShieldCheck size={32} className="mb-2 text-green-400" /><span className="font-bold text-lg text-white">Confirmar Manualmente</span><span className="text-sm text-gray-400">Recebi a confirmação por fora.</span></button></div><button onClick={onClose} className="mt-8 w-full text-center text-gray-400 hover:underline">Cancelar</button></ModalWrapper>);
 const SignatureModal = ({ log, onClose, db, appId, department }) => {
     const [signerName, setSignerName] = useState('');
     const handleSign = async () => {
@@ -1066,7 +1168,7 @@ const SignatureModal = ({ log, onClose, db, appId, department }) => {
     return (<ModalWrapper onClose={onClose}><div className="flex items-center mb-6"><FileSignature className="text-gray-400 mr-4" size={40} /><div><h2 className="text-2xl font-bold text-white">Termo de {log?.type === 'distribuição' ? 'Responsabilidade' : 'Devolução'}</h2><p className="text-gray-400">ID: {log?.id}</p></div></div><div className="space-y-4 text-gray-300 border-y border-white/10 py-6 my-6"><p>Confirmo a seguinte operação:</p><ul className="list-disc list-inside bg-gray-900/70 p-4 rounded-lg space-y-2 ring-1 ring-white/10"><li><strong>Item:</strong> {log?.itemName}</li><li><strong>Quantidade:</strong> {log?.quantity}</li><li><strong>Para:</strong> {log?.receiver}</li></ul></div><div className="space-y-4"><p className="text-sm text-gray-400">Para confirmar, a pessoa que {log?.type === 'distribuição' ? 'recebeu' : 'devolveu'} deve digitar o nome completo abaixo.</p><InputField label="Nome Completo (Assinatura Digital)" value={signerName} onChange={(e) => setSignerName(e.target.value)} placeholder="Digite o nome completo aqui" colors={{ring: 'focus:ring-green-500'}} /><div className="flex space-x-4 pt-2"><button onClick={onClose} className="w-full bg-gray-600 hover:bg-gray-500 text-gray-100 font-bold py-3 px-4 rounded-lg">Cancelar</button><button onClick={handleSign} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Assinar e Confirmar</button></div></div></ModalWrapper>);
 };
 const RemoteSignatureModal = ({ term, onClose }) => {
-    const emailBody = `Assunto: Confirmação de Recebimento - ${term?.itemName}\n\nOlá, ${term?.receiver}.\n\nPara registar a entrega do item "${term?.itemName}", por favor, responda a este e-mail com a frase "Confirmo o recebimento".\n\nObrigado.`;
+    const emailBody = `Assunto: Confirmação de Recebimento - ${term?.itemName}\n\nOlá, ${term?.receiver}.\n\nPara registrar a entrega do item "${term?.itemName}", por favor, responda a este e-mail com a frase "Confirmo o recebimento".\n\nObrigado.`;
     const [copied, setCopied] = useState(false);
     const copyToClipboard = (text) => {
         const textArea = document.createElement('textarea');
@@ -1092,8 +1194,8 @@ const ManualConfirmationModal = ({ log, onClose, db, appId, department }) => {
     return (<ModalWrapper onClose={onClose}><div className="flex items-center mb-4"><ShieldCheck className="text-green-400" size={24} /><h3 className="text-2xl font-bold ml-3 text-gray-100">Confirmar Manualmente</h3></div><p className="text-gray-300 mb-6">Confirma que recebeu a prova de recebimento (ex: por resposta de e-mail) para a movimentação do item <strong className="text-white">{log?.itemName}</strong> para <strong className="text-white">{log?.receiver}</strong>?</p><div className="flex space-x-4 pt-2"><button onClick={onClose} className="w-full bg-gray-600 hover:bg-gray-500 text-gray-100 font-bold py-3 px-4 rounded-lg">Cancelar</button><button onClick={handleConfirm} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Sim, Confirmar Recebimento</button></div></ModalWrapper>);
 };
 
-const InfoCard = ({ title, value, icon: Icon, colors = {} }) => (
-    <div className={`bg-gray-800/50 backdrop-blur-lg p-6 rounded-xl ring-1 ring-white/10 border-l-4 ${colors.border || 'border-transparent'} transition-all duration-300 hover:bg-gray-700/50 hover:shadow-2xl hover:-translate-y-1`}>
+const InfoCard = ({ title, value, icon: Icon, colors = {}, containerClassName = '' }) => (
+    <div className={`bg-gray-800/50 backdrop-blur-lg p-6 rounded-xl ring-1 ring-white/10 border-l-4 ${colors.border || 'border-transparent'} transition-all duration-300 hover:bg-gray-700/50 hover:shadow-2xl hover:-translate-y-1 ${containerClassName}`}>
         <div className="flex items-center justify-between">
             <div>
                 <p className="text-sm font-medium text-gray-400">{title}</p>
@@ -1112,7 +1214,7 @@ const LogItem = ({ log, onResolvePendingClick }) => {
     const logTypes = {
         'distribuição': { color: 'border-red-500/50', textColor: 'text-red-400', text: 'Distribuição' },
         'retirada': { color: 'border-yellow-500/50', textColor: 'text-yellow-400', text: 'Retirada Admin' },
-        'ajuste': { color: 'border-blue-500/50', textColor: 'text-blue-400', text: 'Ajuste de Stock' },
+        'ajuste': { color: 'border-blue-500/50', textColor: 'text-blue-400', text: 'Ajuste de Estoque' },
         'default': { color: 'border-gray-500/50', textColor: 'text-gray-400', text: 'Evento' }
     };
 
@@ -1120,7 +1222,6 @@ const LogItem = ({ log, onResolvePendingClick }) => {
     const isDistribution = log.type === 'distribuição';
     const isSigned = log.signatureStatus === 'signed';
     const isManual = log.signatureStatus === 'confirmed_manually';
-    const isNotApplicable = log.signatureStatus === 'nao_aplicavel';
     
     const quantityText = log.type === 'ajuste' ? log.quantity : `${log.quantity || 0}x`;
 
@@ -1158,8 +1259,8 @@ const LogItem = ({ log, onResolvePendingClick }) => {
 };
 
 
-const FormCard = ({ title, icon, children, colors = {} }) => <div className={`bg-gray-800/50 backdrop-blur-lg p-6 rounded-xl ring-1 ring-white/10 border-t-4 ${colors.border || 'border-gray-600/50'}`}><div className="flex items-center mb-4">{icon}<h2 className="text-xl font-bold ml-3 text-gray-100">{title}</h2></div>{children}</div>;
-const DataCard = ({ title, icon, children, colors = {} }) => <div className={`bg-gray-800/50 backdrop-blur-lg p-6 rounded-xl ring-1 ring-white/10 border-t-4 ${colors.border || 'border-gray-600/50'}`}><div className="flex items-center mb-4">{icon}<h2 className="text-xl font-bold ml-3 text-gray-100">{title}</h2></div>{children}</div>;
+const FormCard = ({ title, icon, children, colors = {}, containerClassName = '' }) => <div className={`bg-gray-800/50 backdrop-blur-lg p-6 rounded-xl ring-1 ring-white/10 border-t-4 ${colors.border || 'border-gray-600/50'} ${containerClassName}`}><div className="flex items-center mb-4">{icon}<h2 className="text-xl font-bold ml-3 text-gray-100">{title}</h2></div>{children}</div>;
+const DataCard = ({ title, icon, children, colors = {}, containerClassName = '' }) => <div className={`bg-gray-800/50 backdrop-blur-lg p-6 rounded-xl ring-1 ring-white/10 border-t-4 ${colors.border || 'border-gray-600/50'} ${containerClassName}`}><div className="flex items-center mb-4">{icon}<h2 className="text-xl font-bold ml-3 text-gray-100">{title}</h2></div>{children}</div>;
 
 const InputField = ({ label, type = 'text', value, onChange, placeholder, colors, icon: Icon }) => (
     <div>
@@ -1176,7 +1277,7 @@ const InputField = ({ label, type = 'text', value, onChange, placeholder, colors
                 onChange={onChange}
                 placeholder={placeholder}
                 className={`w-full p-3 ${Icon ? 'pl-10' : ''} bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 ${colors?.ring || 'focus:ring-blue-500'}`}
-                min={type === 'number' ? '1' : undefined}
+                min={type === 'number' ? '0' : undefined}
             />
         </div>
     </div>
